@@ -1,4 +1,4 @@
-# ProtExtract
+# ProtExtract 0.9.0
 A Linux command-line tool to extract homologous proteins from proteomes.
 
 ## Description
