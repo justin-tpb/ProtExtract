@@ -3,7 +3,7 @@ source ~/.bashrc
 
 # ProtExtract 0.9.0
 # Author: Justin Teixeira Pereira Bassiaridis
-# Date: 2023-09-05
+# Date: 2024-02-04
 # License: MIT
 
 # Exit the script if an error appears or an unbound variable is called
@@ -269,8 +269,9 @@ ProtExtract() {
 
 			# AWK script to write the subject sequence ID with the highest bit-score sum (i.e. the best hit) to a new file
 			# It prints "missing" instead of a sequence ID if no hits were found
-			awk '
+			awk '{
 				sum[$2] += $12
+			}
 			END {
 				max = 0
 				for (hit in sum) {
