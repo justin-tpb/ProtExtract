@@ -1,47 +1,31 @@
 #!/bin/bash -l
 source ~/.bashrc
 
-# ProtExtract 0.9.0
+# ProtExtract 0.9.1
+# Source: https://github.com/justin-tpb/ProtExtract/
 # Author: Justin Teixeira Pereira Bassiaridis
-# Date: 2024-02-04
+# Date: 2024-04-10
 # License: MIT
 
 # Exit the script if an error appears or an unbound variable is called
 set -eu
 
 # Set version number
-version="0.9.0"
+version="0.9.1"
 
-# Flag handling
-while getopts :q:Q:s:S:o:m:E:%:p:fcCvh flag
-do
-    case "$flag" in
-        q) queries_dir="$OPTARG";;
-		Q) queries_extension="${OPTARG#.}";;
-        s) subjects_dir="$OPTARG";;
-		S) subjects_extension="${OPTARG#.}";;
-		o) output_dir="$OPTARG";;
-		m) sensitivity="$OPTARG";;
-		E) evalue="$OPTARG";;
-		%) coverage="$OPTARG";;
-		p) pident="$OPTARG";;
-		f) force_overwrite=true;;
-		c) printf "\nExecuting: conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond\n\n"
-		   conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
-		   exit 0;;
-		C) printf "\nExecuting: mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond\n\n"
-		   mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
-		   exit 0;;
-		v) printf "\nProtExtract $version by Justin Teixeira Pereira Bassiaridis\n\n"
-		   exit 0;;
-		h) printf "\nProtExtract $version by Justin Teixeira Pereira Bassiaridis
 
-ProtExtract uses DIAMOND to search for homologs of proteins in proteomes and extracts the sequences
-with the highest bit-score sums among all alignments with homologuous sequences of a query protein.
-It then performs a reciprocal DIAMOND search for verification and only keeps the extracted sequences
-which realign with a homologuous sequence of the same query protein as before as final homologs.
-The extracted and verified sequences will be annotated with the filename of the homologous protein.
-Various information files about the found and missing proteins are created as well.
+# Help message for "-h" option
+help_message() {
+printf "\nProtExtract $version by Justin Teixeira Pereira Bassiaridis
+
+ProtExtract uses DIAMOND to search for potential homologs of proteins within proteomes and extracts the sequence with the highest bit-score sum among all alignments with sequences from a query protein file.
+It then performs a reciprocal DIAMOND search for verification, only keeping an extracted sequence if it realigns with a sequence from the same query protein file as before.
+The extracted and verified sequences will be annotated with the filename of the query protein.
+This tool was primarily designed to work with the 320 marker genes dataset from Strassert et al. 2021 (https://www.nature.com/articles/s41467-021-22044-z).
+While it should work with other single-copy protein datasets, the results might be less accurate as the reciprocal verification depends on rich datasets.
+It only extracts the best hit for each query protein file to avoid extracting paralogs.
+If no homolog exists in the proteome, the best hit may be a paralog or analog.
+Various information files about the found and missing proteins are created as well, including an output table.
 
 Input:
 A directory with protein files as queries, preferably with multiple homologs of the same protein per file for higher accuracy.
@@ -56,17 +40,17 @@ A directory with proteome files as subjects. Can be the same input folder, as lo
 
 Important:
 Working, input and output directories must not contain spaces!
-ProtExtract only runs on Linux and requires an Anaconda environment called 'protextract' with DIAMOND, Python 3, Biopython and natsort.
+ProtExtract requires an Anaconda environment called 'protextract' with DIAMOND, Python 3, Biopython and natsort.
 You can use the option -c to do this automatically if you have Anaconda installed, or -C to use Mamba instead.
 
 Options:
 -q DIRECTORY: Protein (query) input directory. Defaults to 'Proteins'.
-   Add proteins for which homologs are to be extracted here.
+   Add proteins for which homologs are to be extracted here. Cannot be symlinks.
 -Q STRING: Protein (query) file extension. Defaults to '.fasta'.
 -s DIRECTORY: Proteome (subject) input directory. Defaults to 'Proteomes'.
-   Add proteomes from which proteins are to be extracted here.
+   Add proteomes from which proteins are to be extracted here. Cannot be symlinks.
 -S STRING: Proteome (subject) file extension. Defaults to '.fasta'.
--o DIRECTORY: Output directory. Defaults to 'Output'.
+-o DIRECTORY: Output directory. Defaults to 'Output_<evalue>_<coverage>_<pidentity>'.
 -m STRING: Sensitivity mode for DIAMOND. Defaults to 'very-sensitive'.
    Available modes: 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 'very-sensitive', 'ultra-sensitive'
 -E STRING: Maximum allowed E-value for DIAMOND. Defaults to '1e-20'.
@@ -79,15 +63,62 @@ Options:
     mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
 -v: Display the version number.
 -h: Show this help message.\n\n"
-           exit 0;;
-	    *) printf "\nError: Invalid option: -$OPTARG\n\n"
-           exit 1;;
-        :) printf "\nError: option -$OPTARG requires an argument!\n\n"
-           exit 1;;
-	esac
-done
+}
 
+
+# Parse command line options
+parse_options() {
+	while getopts :q:Q:s:S:o:m:E:%:p:fcCvh flag
+	do
+		case "$flag" in
+			q) queries_dir="$OPTARG";;
+			Q) queries_extension="${OPTARG#.}";;
+			s) subjects_dir="$OPTARG";;
+			S) subjects_extension="${OPTARG#.}";;
+			o) output_dir="$OPTARG";;
+			m) sensitivity="$OPTARG";;
+			E) evalue="$OPTARG";;
+			%) coverage="$OPTARG";;
+			p) pident="$OPTARG";;
+			f) force_overwrite=true;;
+			c) printf "\nExecuting: conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond\n\n"
+			conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
+			exit 0;;
+			C) printf "\nExecuting: mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond\n\n"
+			mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
+			exit 0;;
+			v) printf "\nProtExtract $version by Justin Teixeira Pereira Bassiaridis\n\n"
+			exit 0;;
+			h) help_message 
+			exit 0;;
+			\?) printf "\nError: Invalid option: -$OPTARG\n\n"
+			exit 1;;
+			:) printf "\nError: option -$OPTARG requires an argument!\n\n"
+			exit 1;;
+		esac
+	done
+}
+
+
+# Main ProtExtract function
 ProtExtract() {
+	## Check if required Python scripts exist
+	# Define the path to the directory containing the scripts
+	python_scripts_dir="$(dirname "$0")/ProtExtract_files/"
+
+	# List of scripts to be checked for existence
+	python_scripts=("extract_and_rename_sequences.py" "generate_protein_table.py" "keep_verified_sequences.py" "merge_fasta_files.py")
+
+	# Loop through the list of scripts and check if they exist
+	for script_name in "${python_scripts[@]}"; do
+		if [ ! -f "$python_scripts_dir/$script_name" ]; then
+			printf "\nMissing '$script_name'!\nPlease download it from https://github.com/justin-tpb/ProtExtract/tree/main/ProtExtract_files"
+			printf " and put it into a folder called ProtExtract_files next to the ProtExtract script.\n\n"
+			exit 1
+		fi
+	done
+
+
 	## Input handling
 	# Set the path to the queries (proteins) with absolute path if not provided
 	queries_dir="${queries_dir:-"$(pwd)/Proteins/"}"
@@ -125,9 +156,24 @@ ProtExtract() {
 	queries=($(printf "%s\n" "$queries_dir/"*"$queries_extension" | sort -Vf))
 	subjects=($(printf "%s\n" "$subjects_dir/"*"$subjects_extension" | sort -Vf))
 
+
+	## Options handling
+	# Set the sensitivity of DIAMOND if not provided
+	sensitivity="${sensitivity:-very-sensitive}"
+
+	# Set the maximum allowed e-value for DIAMOND if not provided
+	evalue="${evalue:-1e-20}"
+
+	# Set the minimum required coverage for DIAMOND if not provided
+	coverage="${coverage:-50}"
+
+	# Set the minimum required percent identity for DIAMOND if not provided
+	pident="${pident:-20}"
+
+
 	## Output handling
 	# Set the output directory with absolute path if not specified
-	output_dir="${output_dir:-"$(pwd)/Output/"}"
+	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident/"}"
 	[[ "$output_dir" != /* ]] && output_dir="$(pwd)/$output_dir"
 	output_dir="${output_dir%/}"
 
@@ -153,19 +199,6 @@ ProtExtract() {
 	extracted_summary_dir="$output_dir/Proteins/Summaries/"
 	mkdir -p "$query_working_dir" "$subject_working_dir" "$extracted_fasta_dir" "$extracted_summary_dir"
 
-	## Options handling
-	# Set the sensitivity of DIAMOND if not provided
-	sensitivity="${sensitivity:-very-sensitive}"
-
-	# Set the maximum allowed e-value for DIAMOND if not provided
-	evalue="${evalue:-1e-20}"
-
-	# Set the minimum required coverage for DIAMOND if not provided
-	coverage="${coverage:-50}"
-
-	# Set the minimum required percent identity for DIAMOND if not provided
-	pident="${pident:-20}"
-
 	## Print start message
 	printf "\n\nProtExtract $version by Justin Teixeira Pereira Bassiaridis\n\n\n"
 	printf "********** Settings **********\n\n"
@@ -176,6 +209,7 @@ ProtExtract() {
 	printf "Maximum allowed E-value: $evalue\n"
 	printf "Minimum required coverage: $coverage%%\n"
 	printf "Minimum required percent identity: $pident%%\n\n\n"
+
 
 	## Remove any existing gaps from the query protein sequences
 	# Read the query proteins
@@ -203,12 +237,14 @@ ProtExtract() {
 		sed -i '/^>/! s/-//g' "${queries[@]}"
 	fi
 
+
 	## Create list with all query protein names based on filenames for final verification
 	# Set query filename list
 	query_filenames="$query_working_dir/protein_filenames.txt"
 
 	# For loop to turn all protein filenames into a list, sorted alphabetically and case-insensitive
 	for file in "$queries_dir/"*"$queries_extension"; do echo $(basename "$file" "$queries_extension"); done | sort -Vf > "$query_filenames"
+
 
 	## Create a single query protein fasta by merging all query protein files reciprocal blast
 	# Set merged query proteins
@@ -218,7 +254,7 @@ ProtExtract() {
 	# The filename of each file will be added to the front of each sequence header within
 	printf "********** Preparation for reciprocal DIAMOND search **********\n\n"
 	printf "Merging all protein files into a single file.\n\n"
-	python3 ProtExtract_files/merge_fasta_files.py "$queries_dir" "$query_files_merged"
+	python3 "$python_scripts_dir/merge_fasta_files.py" "$queries_dir" "$query_files_merged"
 	
 	# Set query protein database
 	query_db="${query_files_merged%.fasta}"
@@ -226,6 +262,7 @@ ProtExtract() {
 	# Create a DIAMOND database for the merged query proteins file
 	printf "Creating a DIAMOND database for the merged protein file.\n\n\n"
 	diamond makedb --in "$query_files_merged" --db "$query_db" --quiet
+
 
 	### Main task, inluding protein identification, extraction and verification with DIAMOND, AWK and Python
 	## Best protein hit identification using DIAMOND and AWK
@@ -241,11 +278,14 @@ ProtExtract() {
 		subject_dir="$output_dir/Subjects/$subject_name/"
 		extraction_dir="$subject_dir/Extraction/"
 		extraction_diamond_dir="$extraction_dir/DIAMOND/"
-		extraction_best_dir="$extraction_dir/Best_hits/"
-		mkdir -p "$extraction_diamond_dir" "$extraction_best_dir"
+		mkdir -p "$extraction_diamond_dir"
 
 		# Set subject database
 		subject_db="$subject_working_dir/$subject_name"
+
+		# Initialize the file storing the subject sequence IDs of the best hits
+		best_hits="$extraction_diamond_dir/best_hits.txt"
+		> "$best_hits"
 
 		# Create a DIAMOND database for each subject
 		printf "Creating a DIAMOND database for $(basename "$subject").\n\n"
@@ -267,9 +307,12 @@ ProtExtract() {
 			--"$sensitivity" --evalue "$evalue" --query-cover "$coverage" --subject-cover "$coverage" --id "$pident" \
 			--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp scovhsp
 
-			# AWK script to write the subject sequence ID with the highest bit-score sum (i.e. the best hit) to a new file
+			# Extract the query name from the file path, removing the extension
+			query_name=$(basename "$query" "$queries_extension")
+
+			# AWK script to append the query name and subject sequence ID with the highest bit-score sum (i.e. the best hit) to a file
 			# It prints "missing" instead of a sequence ID if no hits were found
-			awk '{
+			awk -v qname="$query_name" '{
 				sum[$2] += $12
 			}
 			END {
@@ -281,30 +324,28 @@ ProtExtract() {
 					}
 				}
 				if (max) {
-					print besthit
+					print qname "\t" besthit
 				} else {
-					print "missing"
+					print qname "\t" "missing"
 				}
-			}' "$diamond_out" > "$extraction_best_dir/$(basename "$query" "$queries_extension").txt"
+			}' "$diamond_out" >> "$best_hits"
 		done
 		# Print query search finish text
 		printf "\33[2K\rDone!"
+
 
 		## Start of protein extraction using AWK and Python
 		# Set the extracted protein output filenames
 		unverified_proteins_fasta="$extraction_dir/$subject_name.unverified.fasta"
 		unverified_proteins_summary="$extraction_dir/$subject_name.unverified.summary.txt"
 
-		# AWK script to concatenate all best hits of a subject into a single protein list
-		# It adds the protein name (i.e. the filename without path and file extension) to the front of the header 
-		# It also sorts the best protein hit list alphabetically and case-insensitive to match most OS file explorers
+		# AWK script to sort the best protein hit list alphabetically and case-insensitive
 		# It then pipes the output into another AWK script which adds "duplicate" to the third column of duplicated sequences
 		printf "\n\nWriting information about the best hits to $(basename "$unverified_proteins_summary").\n\n"
 		awk '{
-			sub(/\.txt$/, "", FILENAME)
-			sub(/^.*\//, "", FILENAME)
-			print FILENAME " " $0
-		}' $(echo "$extraction_best_dir"/*.txt | tr ' ' '\n' | sort -Vf) |
+			print $1, $2
+		}' "$best_hits" |
+		sort -Vf |
 		awk '{
 			if ($2 == "missing") {
 				print
@@ -316,6 +357,9 @@ ProtExtract() {
 				print
 			}
 		}' > "$unverified_proteins_summary"
+
+		# Remove the original best hit file
+		rm "$best_hits"
 
 		# AWK script to check if any proteins were found and set corresponding variable
 		proteins_found=$(awk '
@@ -336,7 +380,8 @@ ProtExtract() {
 
 		# Run "extract_and_rename_seqs.py" to extract the sequences of the best hits (requires biopython and natsort)
 		printf "Extracting the best hits to $(basename "$unverified_proteins_fasta").\n\n"
-		python3 ProtExtract_files/extract_and_rename_sequences.py "$subject" "$unverified_proteins_summary" "$unverified_proteins_fasta"
+		python3 "$python_scripts_dir/extract_and_rename_sequences.py" "$subject" "$unverified_proteins_summary" "$unverified_proteins_fasta"
+
 
 		## Start of verification by reciprocal search using DIAMOND, AWK and Python
 		# Set and create the verification directories
@@ -400,7 +445,7 @@ ProtExtract() {
 		# Run "keep_verified_sequences.py" to keep only sequences verified by reciprocal blast (requires biopython)
 		# Verified sequences are taken from "$verified_proteins_reciprocal" and piped to the Python script via stdin
 		grep "matches" "$verified_proteins_reciprocal" | sed 's/matches//g' |
-		python3 ProtExtract_files/keep_verified_sequences.py "$unverified_proteins_fasta" - "$verified_proteins_fasta"
+		python3 "$python_scripts_dir/keep_verified_sequences.py" "$unverified_proteins_fasta" - "$verified_proteins_fasta"
 
 		# Print final subject file locations
 		printf "The final FASTA file with the extracted and verified proteins can be found here:\n"
@@ -411,12 +456,14 @@ ProtExtract() {
 		# Copy final extracted protein sequences to collective folder
 		cp "$verified_proteins_fasta" "$extracted_fasta_dir/$(basename "$verified_proteins_fasta")"
 	done
+
+
 	## Generating protein summary
 	# Set the protein summary table filename
 	protein_table="$output_dir/Proteins/protein_summary.tsv"
 
 	# Run "generate_protein_table.py" to generate a summary table with information about found and missing proteins in the proteomes
-	python3 ProtExtract_files/generate_protein_table.py "$extracted_summary_dir" "$protein_table"
+	python3 "$python_scripts_dir/generate_protein_table.py" "$extracted_summary_dir" "$protein_table"
 
 	# Remove ".summary.txt" from the filenames within the protein summary table
 	sed -i 's/.summary.txt//g' "$protein_table"
@@ -432,11 +479,13 @@ ProtExtract() {
 	printf "Runtime: $(($SECONDS / 3600))h $((($SECONDS / 60) % 60))min $(($SECONDS % 60))s\n\n\n"
 }
 
-# Activate the conda environment and call the ProtExtract function, printing stdout and stderr to both the terminal and a log file
+
+# Activate the conda environment and call functions, printing stdout and stderr to both the terminal and a log file
 conda activate protextract
+parse_options "$@"
 ProtExtract |& tee ProtExtract.log
 conda deactivate
 
 # Copy the log file to the output folder if it exists
-output_dir="${output_dir:-"$(pwd)/Output/"}"
+output_dir="${output_dir:-"$(pwd)/Output_${evalue:-1e-20}_cov${coverage:-50}_pid${pident:-20}/"}"
 [[ -d "$output_dir" ]] && cp ProtExtract.log "$output_dir/"
