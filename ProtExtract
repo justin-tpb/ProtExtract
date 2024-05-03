@@ -1,17 +1,17 @@
 #!/bin/bash -l
 source ~/.bashrc
 
-# ProtExtract 0.9.1
+# ProtExtract 1.0.0
 # Source: https://github.com/justin-tpb/ProtExtract/
 # Author: Justin Teixeira Pereira Bassiaridis
-# Date: 2024-04-10
+# Date: 2024-05-03
 # License: MIT
 
 # Exit the script if an error appears or an unbound variable is called
 set -eu
 
 # Set version number
-version="0.9.1"
+version="1.0.0"
 
 
 # Help message for "-h" option
@@ -51,7 +51,9 @@ Options:
    Add proteomes from which proteins are to be extracted here. Cannot be symlinks.
 -S STRING: Proteome (subject) file extension. Defaults to '.fasta'.
 -o DIRECTORY: Output directory. Defaults to 'Output_<evalue>_<coverage>_<pidentity>'.
--m STRING: Sensitivity mode for DIAMOND. Defaults to 'very-sensitive'.
+-O STRING: Output directory suffix, appended with an underscore. Defaults to no suffix.
+-t INTEGER: Number of threads used by DIAMOND. Defaults to all available cores.
+-m STRING: Sensitivity mode for DIAMOND. Defaults to 'default'.
    Available modes: 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 'very-sensitive', 'ultra-sensitive'
 -E STRING: Maximum allowed E-value for DIAMOND. Defaults to '1e-20'.
 -%% INTEGER: Minimum required percentage of query and subject coverage for DIAMOND. Defaults to '50'.
@@ -68,7 +70,7 @@ Options:
 
 # Parse command line options
 parse_options() {
-	while getopts :q:Q:s:S:o:m:E:%:p:fcCvh flag
+	while getopts :q:Q:s:S:o:O:m:t:E:%:p:fcCvh flag
 	do
 		case "$flag" in
 			q) queries_dir="$OPTARG";;
@@ -76,6 +78,8 @@ parse_options() {
 			s) subjects_dir="$OPTARG";;
 			S) subjects_extension="${OPTARG#.}";;
 			o) output_dir="$OPTARG";;
+			O) output_suffix="$OPTARG";;
+			t) threads="$OPTARG";;
 			m) sensitivity="$OPTARG";;
 			E) evalue="$OPTARG";;
 			%) coverage="$OPTARG";;
@@ -104,7 +108,7 @@ parse_options() {
 ProtExtract() {
 	## Check if required Python scripts exist
 	# Define the path to the directory containing the scripts
-	python_scripts_dir="$(dirname "$0")/ProtExtract_files/"
+	python_scripts_dir="$(dirname "$0")/ProtExtract_scripts/"
 
 	# List of scripts to be checked for existence
 	python_scripts=("extract_and_rename_sequences.py" "generate_protein_table.py" "keep_verified_sequences.py" "merge_fasta_files.py")
@@ -112,8 +116,8 @@ ProtExtract() {
 	# Loop through the list of scripts and check if they exist
 	for script_name in "${python_scripts[@]}"; do
 		if [ ! -f "$python_scripts_dir/$script_name" ]; then
-			printf "\nMissing '$script_name'!\nPlease download it from https://github.com/justin-tpb/ProtExtract/tree/main/ProtExtract_files"
-			printf " and put it into a folder called ProtExtract_files next to the ProtExtract script.\n\n"
+			printf "\nMissing '$script_name'!\nPlease download it from 'https://github.com/justin-tpb/ProtExtract/tree/main/ProtExtract_scripts'"
+			printf " and put it into a folder called 'ProtExtract_scripts' next to the ProtExtract main script.\n\n"
 			exit 1
 		fi
 	done
@@ -132,10 +136,10 @@ ProtExtract() {
 
 	# Check if input folders exist
 	if [[ ! -d "$queries_dir" ]]; then
-		printf "\nError: Directory $queries_dir/ does not exist.\nPlease use the option -q to provide a valid protein directory.\n\n"
+		printf "\nError: Directory '$queries_dir/' does not exist.\nPlease use the option -q to provide a valid protein directory.\n\n"
 		exit 1
 	elif [[ ! -d "$subjects_dir" ]]; then
-		printf "\nError: Directory $subjects_dir/ does not exist.\nPlease use the option -s to provide a valid proteome directory.\n\n"
+		printf "\nError: Directory '$subjects_dir/' does not exist.\nPlease use the option -s to provide a valid proteome directory.\n\n"
 		exit 1
 	fi
 
@@ -145,10 +149,10 @@ ProtExtract() {
 
 	# Check if input files exist using find
 	if [[ -z $(find "$queries_dir" -maxdepth 1 -name "*$queries_extension" -type f) ]]; then
-		printf "\nError: No $queries_extension files found in $queries_dir/.\n\n"
+		printf "\nError: No '$queries_extension' files found in '$queries_dir/'.\nPlease double-check the file extension.\n\n"
 		exit 1
 	elif [[ -z $(find "$subjects_dir" -maxdepth 1 -name "*$subjects_extension" -type f) ]]; then
-		printf "\nError: No $subjects_extension files found in $subjects_dir/.\n\n"
+		printf "\nError: No '$subjects_extension' files found in '$subjects_dir/'.\nPlease double-check the file extension.\n\n"
 		exit 1
 	fi
 
@@ -158,8 +162,21 @@ ProtExtract() {
 
 
 	## Options handling
-	# Set the sensitivity of DIAMOND if not provided
-	sensitivity="${sensitivity:-very-sensitive}"
+	# Set the number of threads for DIAMOND
+	threads="${threads:-all available cores}"
+	if [[ "$threads" == "all available cores" ]]; then
+		threads_option=""
+	else
+		threads_option="--threads $threads"
+	fi
+	
+	# Set the sensitivity of DIAMOND
+	sensitivity="${sensitivity:-default}"
+	if [[ "$sensitivity" == "default" ]]; then
+		sensitivity_option=""
+	else
+		sensitivity_option="--$sensitivity"
+	fi
 
 	# Set the maximum allowed e-value for DIAMOND if not provided
 	evalue="${evalue:-1e-20}"
@@ -175,7 +192,8 @@ ProtExtract() {
 	# Set the output directory with absolute path if not specified
 	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident/"}"
 	[[ "$output_dir" != /* ]] && output_dir="$(pwd)/$output_dir"
-	output_dir="${output_dir%/}"
+	output_suffix="${output_suffix:-}"
+	[[ "$output_suffix" ]] && output_dir="${output_dir%/}_$output_suffix"
 
 	# Set force overwrite to false if unset
 	force_overwrite=${force_overwrite:=false}
@@ -205,6 +223,7 @@ ProtExtract() {
 	printf "Proteins (queries): $queries_dir/"*"$queries_extension\n"
 	printf "Proteomes (subjects): $subjects_dir/"*"$subjects_extension\n"
 	printf "Output directory: $output_dir/\n"
+	printf "Number of threads: ${threads:-'all available cores'}\n"
 	printf "Sensitivity mode: $sensitivity\n"
 	printf "Maximum allowed E-value: $evalue\n"
 	printf "Minimum required coverage: $coverage%%\n"
@@ -212,8 +231,8 @@ ProtExtract() {
 
 
 	## Remove any existing gaps from the query protein sequences
-	# Read the query proteins
-	sequence=$(grep -v ">" "${queries[@]}" | tr -d '\n')
+	# Read the query protein sequences into one continuous string of amino acids
+	sequence=$(grep -v ">" "${queries[@]}" | sed "s/.*://g" | tr -d "\n")
 
 	# Check if any gaps exist within query protein sequences
 	if [[ $sequence == *-* ]]; then
@@ -261,7 +280,7 @@ ProtExtract() {
 
 	# Create a DIAMOND database for the merged query proteins file
 	printf "Creating a DIAMOND database for the merged protein file.\n\n\n"
-	diamond makedb --in "$query_files_merged" --db "$query_db" --quiet
+	diamond makedb --in "$query_files_merged" --db "$query_db" --quiet $threads_option
 
 
 	### Main task, inluding protein identification, extraction and verification with DIAMOND, AWK and Python
@@ -288,11 +307,11 @@ ProtExtract() {
 		> "$best_hits"
 
 		# Create a DIAMOND database for each subject
-		printf "Creating a DIAMOND database for $(basename "$subject").\n\n"
-		diamond makedb --in "$subject" --db "$subject_db" --quiet
+		printf "Creating a DIAMOND database for '$(basename "$subject")'.\n\n"
+		diamond makedb --in "$subject" --db "$subject_db" --quiet $threads_option
 		
 		# Print DIAMOND search text
-		printf "Running DIAMOND to identify the proteins to extract from $(basename "$subject"):\n"
+		printf "Running DIAMOND to identify the proteins to extract from '$(basename "$subject")':\n"
 
 		# Loop through each query
 		for query in "${queries[@]}"; do
@@ -302,9 +321,9 @@ ProtExtract() {
 			# Run DIAMOND in user-defined sensitivity mode with the protein name as the output filename
 			# DIAMOND will only show the best hit for each query sequence, with a maximum e-value and minimum coverage and percent identity
 			# \33[2K\r makes the terminal output overwrite the current line
-			printf "\33[2K\rRunning DIAMOND with the query $(basename "$query")."
-			diamond blastp --query "$query" --db "$subject_db" --out "$diamond_out" --quiet --max-target-seqs 1 \
-			--"$sensitivity" --evalue "$evalue" --query-cover "$coverage" --subject-cover "$coverage" --id "$pident" \
+			printf "\33[2K\rRunning DIAMOND with the query '$(basename "$query")'."
+			diamond blastp --query "$query" --db "$subject_db" --out "$diamond_out" --quiet $threads_option $sensitivity_option \
+			--max-target-seqs 1 --evalue "$evalue" --query-cover "$coverage" --subject-cover "$coverage" --id "$pident" \
 			--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp scovhsp
 
 			# Extract the query name from the file path, removing the extension
@@ -336,12 +355,12 @@ ProtExtract() {
 
 		## Start of protein extraction using AWK and Python
 		# Set the extracted protein output filenames
-		unverified_proteins_fasta="$extraction_dir/$subject_name.unverified.fasta"
-		unverified_proteins_summary="$extraction_dir/$subject_name.unverified.summary.txt"
+		unverified_proteins_fasta="$extraction_dir/$subject_name.unverified_proteins.fasta"
+		unverified_proteins_summary="$extraction_dir/$subject_name.unverified_summary.txt"
 
 		# AWK script to sort the best protein hit list alphabetically and case-insensitive
 		# It then pipes the output into another AWK script which adds "duplicate" to the third column of duplicated sequences
-		printf "\n\nWriting information about the best hits to $(basename "$unverified_proteins_summary").\n\n"
+		printf "\n\nWriting information about the best hits to '$(basename "$unverified_proteins_summary")'.\n\n"
 		awk '{
 			print $1, $2
 		}' "$best_hits" |
@@ -373,13 +392,13 @@ ProtExtract() {
 
 		# Skip to next subject if no proteins were found
 		if [[ "$proteins_found" == false ]]; then
-			printf "No proteins were found in $(basename "$subject"). Skipping the reciprocal verification.\n\n\n"
+			printf "No proteins were found in '$(basename "$subject")'. Skipping the reciprocal verification.\n\n\n"
 			cp "$unverified_proteins_summary" "$extracted_summary_dir/$(basename "$unverified_proteins_summary" .unverified.summary.txt).summary.txt"
 			continue
 		fi
 
 		# Run "extract_and_rename_seqs.py" to extract the sequences of the best hits (requires biopython and natsort)
-		printf "Extracting the best hits to $(basename "$unverified_proteins_fasta").\n\n"
+		printf "Extracting the best hits to '$(basename "$unverified_proteins_fasta")'.\n\n"
 		python3 "$python_scripts_dir/extract_and_rename_sequences.py" "$subject" "$unverified_proteins_summary" "$unverified_proteins_fasta"
 
 
@@ -389,23 +408,23 @@ ProtExtract() {
 		mkdir -p "$verification_dir"
 
 		# Set the verified proteins output filenames
-		verified_proteins_fasta="$subject_dir/$subject_name.fasta"
+		verified_proteins_fasta="$subject_dir/$subject_name.proteins.fasta"
 		verified_proteins_summary="$subject_dir/$subject_name.summary.txt"
 		verified_proteins_reciprocal="$verification_dir/$subject_name.reciprocal.txt"
 
 		# Set the DIAMOND output filename
-		diamond_reciprocal_out="$verification_dir/$(basename "$verified_proteins_fasta" .fasta).reciprocal.tsv"
+		diamond_reciprocal_out="$verification_dir/$subject_name.reciprocal.tsv"
 
 		# Run reciprocal blast search with DIAMOND in user-defined sensitivity mode
 		# DIAMOND will only show the best hit for each query sequence, with a maximum e-value and minimum coverage and percent identity
-		printf "Running a reciprocal DIAMOND search to verify the extracted proteins in $(basename "$unverified_proteins_fasta").\n\n"
-		diamond blastp --query "$unverified_proteins_fasta" --db "$query_db" --out "$diamond_reciprocal_out" --quiet \
-		--max-target-seqs 1 --"$sensitivity" --evalue "$evalue" --query-cover "$coverage" --subject-cover "$coverage"  --id "$pident" \
+		printf "Running a reciprocal DIAMOND search to verify the extracted proteins in '$(basename "$unverified_proteins_fasta")'.\n\n"
+		diamond blastp --query "$unverified_proteins_fasta" --db "$query_db" --out "$diamond_reciprocal_out" --quiet $threads_option $sensitivity_option \
+		--max-target-seqs 1 --evalue "$evalue" --query-cover "$coverage" --subject-cover "$coverage"  --id "$pident" \
 		--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp scovhsp
 
 		# AWK script that checks if the protein names within query and subject sequence IDs match
 			# and outputs the protein name with either "matches" or "does_not_match"
-		printf "Writing information about the reciprocal verification to $(basename "$verified_proteins_reciprocal").\n\n"
+		printf "Writing information about the reciprocal verification to '$(basename "$verified_proteins_reciprocal")'.\n\n"
 		awk '{
 			split($1, query, "|")
 			split($2, subject, "|")
@@ -447,6 +466,10 @@ ProtExtract() {
 		grep "matches" "$verified_proteins_reciprocal" | sed 's/matches//g' |
 		python3 "$python_scripts_dir/keep_verified_sequences.py" "$unverified_proteins_fasta" - "$verified_proteins_fasta"
 
+		# Print number of verified proteins
+		verified_proteins_count=$(grep ">" "$verified_proteins_fasta" | wc -l)
+		printf "$verified_proteins_count proteins were successfully extracted and verified.\n\n"
+
 		# Print final subject file locations
 		printf "The final FASTA file with the extracted and verified proteins can be found here:\n"
 		printf "${subject_dir%/}/$(basename "$verified_proteins_fasta")\n\n"
@@ -477,6 +500,9 @@ ProtExtract() {
 	printf "A summary table with information about all found and missing proteins can be found here:\n"
 	printf "$protein_table\n\n"
 	printf "Runtime: $(($SECONDS / 3600))h $((($SECONDS / 60) % 60))min $(($SECONDS % 60))s\n\n\n"
+
+	# Trap to move log file on exit
+	trap "mv ProtExtract.log '$output_dir'" EXIT
 }
 
 
@@ -485,7 +511,3 @@ conda activate protextract
 parse_options "$@"
 ProtExtract |& tee ProtExtract.log
 conda deactivate
-
-# Copy the log file to the output folder if it exists
-output_dir="${output_dir:-"$(pwd)/Output_${evalue:-1e-20}_cov${coverage:-50}_pid${pident:-20}/"}"
-[[ -d "$output_dir" ]] && cp ProtExtract.log "$output_dir/"

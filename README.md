@@ -1,4 +1,4 @@
-# ProtExtract 0.9.1
+# ProtExtract 1.0.0
 A Linux command-line tool to extract proteins from proteomes.
 
 
@@ -21,29 +21,25 @@ The highest accuracy is achieved with large datasets comprising many protein fil
 	
 * The protein filenames will be treated as the protein names and must not contain spaces.
 * If any gaps exist within the protein sequences, they will be copied for gap removal.
-* The default directory is 'Proteins' and the default file extension is '.fasta'.
-* A custom directory can be provided with the option -q and a custom file extension with -Q.
+* The default directory is `Proteins` and the default file extension is `.fasta`.
+* A custom directory can be provided with the option `-q` and a custom file extension with `-Q`.
    
 A directory with proteome files as subjects. Can be the same input folder, as long as the file extensions are different.
 
-* The sequence headers should ideally not contain vertical bars '|'.
-* The default directory is 'Proteomes' and the default file extension is '.fasta'.
-* A custom directory can be provided with the option -s and a custom file extension with -S.
+* The sequence headers should ideally not contain vertical bars `|`.
+* The default directory is `Proteomes` and the default file extension is `.fasta`.
+* A custom directory can be provided with the option `-s` and a custom file extension with `-S`.
 
 
 ## Requirements
 
-Linux or WSL 2 on Windows (might also work on MacOS)
+Linux or WSL 2 on Windows (might also work on MacOS).
 
-'ProtExtract_files' folder in the same directory as ProtExtract containing the following scripts (provided with the tool):
-    
-    merge_fasta_files.py
-    extract_and_rename_sequences.py
-    keep_verified_sequences.py
-    generate_protein_table.py
-Conda environment called 'protextract' with DIAMOND, Python 3, Biopython and natsort installed.
+[ProtExtract_scripts](https://github.com/justin-tpb/ProtExtract/tree/main/ProtExtract_scripts) folder
+and its content placed in the same directory as the `ProtExtract` main script.
 
-You can create a conda environment automatically using the -c or -C  option or manually install these packages.
+Conda environment called `protextract` with `DIAMOND`, `Python 3`, `Biopython` and `natsort` installed.
+* Create this conda environment automatically using the `-c` (with conda) or `-C` (with mamba) option.
 
 
 ## Usage
@@ -53,7 +49,7 @@ To use ProtExtract, run the following command in the terminal:
     ./ProtExtract [options]
 
 
-## Options
+### Options
 
     -q DIRECTORY: Protein (query) input directory. Defaults to 'Proteins'.
        Add proteins for which homologs are to be extracted here. Cannot be symlinks.
@@ -62,8 +58,10 @@ To use ProtExtract, run the following command in the terminal:
        Add proteomes from which proteins are to be extracted here. Cannot be symlinks.
     -S STRING: Proteome (subject) file extension. Defaults to '.fasta'.
     -o DIRECTORY: Output directory. Defaults to 'Output_<evalue>_<coverage>_<pidentity>'.
-    -m STRING: Sensitivity mode for DIAMOND. Defaults to 'very-sensitive'.
-       Available modes: 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 'very-sensitive', 'ultra-sensitive'
+    -O STRING: Output directory suffix, appended with an underscore. Defaults to no suffix.
+    -t INTEGER: Number of threads used by DIAMOND. Defaults to all available cores.
+    -m STRING: Sensitivity mode for DIAMOND. Defaults to 'default'.
+        Available modes: 'fast', 'default', 'mid-sensitive', 'sensitive', 'more-sensitive', 'very-sensitive', 'ultra-sensitive'
     -E STRING: Maximum allowed E-value for DIAMOND. Defaults to '1e-20'.
     -% INTEGER: Minimum required percentage of query and subject coverage for DIAMOND. Defaults to '50'.
     -p INTEGER: Minimum required percentage of identical positions for DIAMOND. Defaults to '20'.
@@ -76,13 +74,13 @@ To use ProtExtract, run the following command in the terminal:
     -h: Show the help message.
 
 
-## Example Usage
+### Example Usage
 
-To install the required conda environment, navigate to the directory containing the ProtExtract file, enter the following command and follow the instructions:
+To install the required conda environment, navigate to the directory containing the `ProtExtract` main script, enter the following command and follow the instructions:
 
     ./ProtExtract -c
 
-To run ProtExtract with default options, navigate to the directory containing the ProtExtract file and enter the following command:
+To run ProtExtract with default options, navigate to the directory containing the `ProtExtract` main script and enter the following command:
 
     ./ProtExtract
 
@@ -91,29 +89,26 @@ This will run ProtExtract with the default options:
     Proteins (queries): ./Proteins/*.fasta
     Proteomes (subjects): ./Proteomes/*.fasta
     Output directory: ./Output_1e-20_cov50_pid20/
-    Sensitivity mode: very-sensitive
+    Number of threads: all available cores
+    Sensitivity mode: default
     Maximum allowed E-value: 1e-20
     Minimum required coverage: 50%
     Minimum required percent identity: 20%
 
-To run ProtExtract with custom options, navigate to the directory containing the ProtExtract file and enter the following command:
+To run ProtExtract with custom options, navigate to the directory containing the `ProtExtract` main script and enter the following command:
 
-    ./ProtExtract -q ./my_proteins/ -Q .fa -s ./my_proteomes/ -S .pep -o ./my_output/ -m fast -E 1e-30 -% 60 -p 50
+    ./ProtExtract -q ./my_proteins/ -Q .fa -s ./my_proteomes/ -S .pep -o ./my_output/ -O suffix -t 4 -m fast -E 1e-30 -% 60 -p 50
 
 This will run ProtExtract with the following options:
 
     Proteins (queries): ./my_proteins/*.fa
     Proteomes (subjects): ./my_proteomes/*.pep
-    Output directory: ./my_output/
+    Output directory: ./my_output_suffix/
+    Number of threads: 4
     Sensitivity mode: fast
     Maximum allowed E-value: 1e-30
     Minimum required coverage: 60%
     Minimum required percent identity: 50%
-
-
-## Author
-
-Justin Teixeira Pereira Bassiaridis
 
 
 ## Changelog
@@ -140,29 +135,22 @@ Justin Teixeira Pereira Bassiaridis
            The presence of the necessary Python scripts is now verified before execution.
            The Python scripts are now executed relative to the location of the main script.
            Restructured the code slightly.
-           Updated README.md, especially regarding use case.
+           Specified use case in README.md.
+    1.0.0: Added an option to set the number of threads used by DIAMOND, defaulting to all available cores.
+           Added an option to set an output directory suffix, defaulting to no suffix.
+           The default sensitivity for DIAMOND is now 'default', which was not available before.
+           The number of extracted and verified proteins per proteome is now shown in the terminal output.
+           Renamed the folder 'ProtExtract_files' to 'ProtExtract_scripts'.
+           Improved log file handling.
+           Improved gap detection.
+           Updated README.md.
 
 
-# License
+## Author
 
-    MIT License
+Justin Teixeira Pereira Bassiaridis
 
-    Copyright (c) 2024 Justin Teixeira Pereira Bassiaridis
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+## License
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+Distributed under the MIT License. See [LICENSE](https://github.com/justin-tpb/ProtExtract/blob/main/LICENSE) for more information.
