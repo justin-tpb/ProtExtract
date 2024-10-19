@@ -1,17 +1,17 @@
 #!/bin/bash -l
 source ~/.bashrc
 
-# ProtExtract 1.0.0
+# ProtExtract - a marker gene extractor
 # Source: https://github.com/justin-tpb/ProtExtract/
 # Author: Justin Teixeira Pereira Bassiaridis
-# Date: 2024-05-03
+# Date: 2024-10-19
 # License: MIT
 
 # Exit the script if an error appears or an unbound variable is called
 set -eu
 
 # Set version number
-version="1.0.0"
+version="1.0.1"
 
 
 # Help message for "-h" option
@@ -507,7 +507,7 @@ ProtExtract() {
 
 
 # Activate the conda environment and call functions, printing stdout and stderr to both the terminal and a log file
-conda activate protextract
 parse_options "$@"
+conda activate protextract
 ProtExtract |& tee ProtExtract.log
 conda deactivate

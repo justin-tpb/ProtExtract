@@ -1,4 +1,4 @@
-# ProtExtract 1.0.0
+# ProtExtract v1.0.1
 A Linux command-line tool to extract proteins from proteomes.
 
 
@@ -113,37 +113,38 @@ This will run ProtExtract with the following options:
 
 ## Changelog
 
-    0.1.0: First version. Homologous sequences are identified by lowest E-value.
-    0.1.1: Homologous sequences are now identified by highest bit-score, as multiple alignments with an E-value of 0 might exist.
-    0.2.0: Added options to provide the input proteins and proteomes, as well as options to show the help menu and the current version.
-    0.2.1: Homologous sequences are now identified by highest bit-score sum among all alignments with homologous sequences of a query protein.
-    0.3.0: Added an option to specify an output folder, including an overwrite check and a force overwrite option.
-    0.3.1: Added E-value, coverage, and percentage identity threshold options for DIAMOND.
-    0.4.0: Added options for automatic setup of the required Anaconda environment with Anaconda or Mamba.
-    0.4.1: Added query and subject coverage to 12th and 13th column of the output format 6.
-    0.5.0: Major feature update: Added reciprocal verification with DIAMOND.
-    0.5.1: Fixed a bug which sometimes caused unverified proteins to be kept as final homologs.
-    0.6.0: Gaps within query protein sequences will now be removed to improve DIAMOND results.
-    0.6.1: Switched to natural sorting of protein names wherever possible.
-    0.7.0: A protein summary table containing information about all found and missing proteins in the proteomes is now generated.
-    0.7.1: Fixed a bug which caused ProtExtract to crash when no proteins were found at all.
-    0.8.0: Added an option to select the sensitivity level of DIAMOND.
-    0.8.1: Runtime is now displayed at the end.
-    0.9.0: Cleaned up the code. First public version.
-    0.9.1: A single temporary file is now created to store all best hits instead of a separate file for each hit.
-           The default output directory name now contains the search options.
-           The presence of the necessary Python scripts is now verified before execution.
-           The Python scripts are now executed relative to the location of the main script.
-           Restructured the code slightly.
-           Specified use case in README.md.
-    1.0.0: Added an option to set the number of threads used by DIAMOND, defaulting to all available cores.
-           Added an option to set an output directory suffix, defaulting to no suffix.
-           The default sensitivity for DIAMOND is now 'default', which was not available before.
-           The number of extracted and verified proteins per proteome is now shown in the terminal output.
-           Renamed the folder 'ProtExtract_files' to 'ProtExtract_scripts'.
-           Improved log file handling.
-           Improved gap detection.
-           Updated README.md.
+    v0.1.0: First version. Homologous sequences are identified by lowest E-value.
+    v0.1.1: Homologous sequences are now identified by highest bit-score, as multiple alignments with an E-value of 0 might exist.
+    v0.2.0: Added options to provide the input proteins and proteomes, as well as options to show the help menu and the current version.
+    v0.2.1: Homologous sequences are now identified by highest bit-score sum among all alignments with homologous sequences of a query protein.
+    v0.3.0: Added an option to specify an output folder, including an overwrite check and a force overwrite option.
+    v0.3.1: Added E-value, coverage, and percentage identity threshold options for DIAMOND.
+    v0.4.0: Added options for automatic setup of the required Anaconda environment with Anaconda or Mamba.
+    v0.4.1: Added query and subject coverage to 12th and 13th column of the output format 6.
+    v0.5.0: Major feature update: Added reciprocal verification with DIAMOND.
+    v0.5.1: Fixed a bug which sometimes caused unverified proteins to be kept as final homologs.
+    v0.6.0: Gaps within query protein sequences will now be removed to improve DIAMOND results.
+    v0.6.1: Switched to natural sorting of protein names wherever possible.
+    v0.7.0: A protein summary table containing information about all found and missing proteins in the proteomes is now generated.
+    v0.7.1: Fixed a bug which caused ProtExtract to crash when no proteins were found at all.
+    v0.8.0: Added an option to select the sensitivity level of DIAMOND.
+    v0.8.1: Runtime is now displayed at the end.
+    v0.9.0: Cleaned up the code. First public version.
+    v0.9.1: A single temporary file is now created to store all best hits instead of a separate file for each hit.
+            The default output directory name now contains the search options.
+            The presence of the necessary Python scripts is now verified before execution.
+            The Python scripts are now executed relative to the location of the main script.
+            Restructured the code slightly.
+            Specified use case in README.md.
+    v1.0.0: Added an option to set the number of threads used by DIAMOND, defaulting to all available cores.
+            Added an option to set an output directory suffix, defaulting to no suffix.
+            The default sensitivity for DIAMOND is now 'default', which was not available before.
+            The number of extracted and verified proteins per proteome is now shown in the terminal output.
+            Renamed the folder 'ProtExtract_files' to 'ProtExtract_scripts'.
+            Improved log file handling.
+            Improved gap detection.
+            Updated README.md.
+    v1.0.1: Fixed a bug which caused option parsing to fail when the conda environment had not been created yet.
 
 
 ## Author
