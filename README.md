@@ -145,6 +145,8 @@ This will run ProtExtract with the following options:
             Improved gap detection.
             Updated README.md.
     v1.0.1: Fixed a bug which caused option parsing to fail when the conda environment had not been created yet.
+            Corrected the output directory path to display a single slash instead of two at the end.
+            Added 'v' prefix to the version number.
 
 
 ## Author

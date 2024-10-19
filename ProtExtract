@@ -11,7 +11,7 @@ source ~/.bashrc
 set -eu
 
 # Set version number
-version="1.0.1"
+version="v1.0.1"
 
 
 # Help message for "-h" option
@@ -190,7 +190,7 @@ ProtExtract() {
 
 	## Output handling
 	# Set the output directory with absolute path if not specified
-	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident/"}"
+	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident"}"
 	[[ "$output_dir" != /* ]] && output_dir="$(pwd)/$output_dir"
 	output_suffix="${output_suffix:-}"
 	[[ "$output_suffix" ]] && output_dir="${output_dir%/}_$output_suffix"
