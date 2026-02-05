@@ -1,4 +1,4 @@
-# ProtExtract v1.0.1
+# ProtExtract v1.0.2
 A Linux command-line tool to extract proteins from proteomes.
 
 
@@ -66,7 +66,7 @@ To use ProtExtract, run the following command in the terminal:
     -% INTEGER: Minimum required percentage of query and subject coverage for DIAMOND. Defaults to '50'.
     -p INTEGER: Minimum required percentage of identical positions for DIAMOND. Defaults to '20'.
     -f: Force overwrite of existing output files.
-    -c: Create the required conda environment with Anaconda:
+    -c: Create the required conda environment with Conda:
         conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
     -C: Create the required conda environment with Mamba:
         mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
@@ -119,7 +119,7 @@ This will run ProtExtract with the following options:
     v0.2.1: Homologous sequences are now identified by highest bit-score sum among all alignments with homologous sequences of a query protein.
     v0.3.0: Added an option to specify an output folder, including an overwrite check and a force overwrite option.
     v0.3.1: Added E-value, coverage, and percentage identity threshold options for DIAMOND.
-    v0.4.0: Added options for automatic setup of the required Anaconda environment with Anaconda or Mamba.
+    v0.4.0: Added options for automatic setup of the required Conda environment with Conda or Mamba.
     v0.4.1: Added query and subject coverage to 12th and 13th column of the output format 6.
     v0.5.0: Major feature update: Added reciprocal verification with DIAMOND.
     v0.5.1: Fixed a bug which sometimes caused unverified proteins to be kept as final homologs.
@@ -147,6 +147,9 @@ This will run ProtExtract with the following options:
     v1.0.1: Fixed a bug which caused option parsing to fail when the conda environment had not been created yet.
             Corrected the output directory path to display a single slash instead of two at the end.
             Added 'v' prefix to the version number.
+    v1.0.2: Added Mamba fallback for environment activation in case Conda fails.
+			Changed Anaconda to Conda in the help message.
+			Updated README.md.
 
 
 ## Author
