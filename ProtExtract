@@ -4,14 +4,14 @@ source ~/.bashrc
 # ProtExtract - a marker gene extractor
 # Source: https://github.com/justin-tpb/ProtExtract/
 # Author: Justin Teixeira Pereira Bassiaridis
-# Date: 2024-10-19
+# Date: 2025-02-05
 # License: MIT
 
 # Exit the script if an error appears or an unbound variable is called
 set -eu
 
 # Set version number
-version="v1.0.1"
+version="v1.0.2"
 
 
 # Help message for "-h" option
@@ -40,8 +40,8 @@ A directory with proteome files as subjects. Can be the same input folder, as lo
 
 Important:
 Working, input and output directories must not contain spaces!
-ProtExtract requires an Anaconda environment called 'protextract' with DIAMOND, Python 3, Biopython and natsort.
-You can use the option -c to do this automatically if you have Anaconda installed, or -C to use Mamba instead.
+ProtExtract requires a Conda environment called 'protextract' with DIAMOND, Python 3, Biopython and natsort.
+You can use the option -c to do this automatically if you have Conda installed, or -C to use Mamba instead.
 
 Options:
 -q DIRECTORY: Protein (query) input directory. Defaults to 'Proteins'.
@@ -59,7 +59,7 @@ Options:
 -%% INTEGER: Minimum required percentage of query and subject coverage for DIAMOND. Defaults to '50'.
 -p INTEGER: Minimum required percentage of identical positions for DIAMOND. Defaults to '20'.
 -f: Force overwrite of existing output files.
--c: Create the required conda environment with Anaconda:
+-c: Create the required conda environment with Conda:
     conda create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
 -C: Create the required conda environment with Mamba:
     mamba create -n protextract -c conda-forge -c bioconda python biopython natsort diamond
@@ -190,7 +190,7 @@ ProtExtract() {
 
 	## Output handling
 	# Set the output directory with absolute path if not specified
-	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident"}"
+	output_dir="${output_dir:-"$(pwd)/Output_${evalue}_cov${coverage}_pid$pident/"}"
 	[[ "$output_dir" != /* ]] && output_dir="$(pwd)/$output_dir"
 	output_suffix="${output_suffix:-}"
 	[[ "$output_suffix" ]] && output_dir="${output_dir%/}_$output_suffix"
@@ -201,7 +201,7 @@ ProtExtract() {
 	# Check if output folder already exists and ask for overwrite confirmation
 	if [[ -d "$output_dir" && "$force_overwrite" == false ]]; then
 		echo
-		read -p "Output directory '$output_dir/' already exists. Overwrite existing files? (y/n): " choice
+		read -p "Output directory '$output_dir' already exists. Overwrite existing files? (y/n): " choice
 		case "$choice" in
 			y|Y) ;;
 			*) printf "\nExiting ProtExtract. Please rename the existing output folder or specify a new one.\n\n"
@@ -222,7 +222,7 @@ ProtExtract() {
 	printf "********** Settings **********\n\n"
 	printf "Proteins (queries): $queries_dir/"*"$queries_extension\n"
 	printf "Proteomes (subjects): $subjects_dir/"*"$subjects_extension\n"
-	printf "Output directory: $output_dir/\n"
+	printf "Output directory: $output_dir\n"
 	printf "Number of threads: ${threads:-'all available cores'}\n"
 	printf "Sensitivity mode: $sensitivity\n"
 	printf "Maximum allowed E-value: $evalue\n"
@@ -506,8 +506,8 @@ ProtExtract() {
 }
 
 
-# Activate the conda environment and call functions, printing stdout and stderr to both the terminal and a log file
+# Activate the Conda or Mamba environment and call functions, printing stdout and stderr to both the terminal and a log file
 parse_options "$@"
-conda activate protextract
+conda activate protextract || mamba activate protextract
 ProtExtract |& tee ProtExtract.log
 conda deactivate
